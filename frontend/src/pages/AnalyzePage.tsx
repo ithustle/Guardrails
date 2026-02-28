@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Upload, FileSearch, Loader2 } from "lucide-react";
 import { analyzeApk } from "../lib/api";
 
@@ -10,6 +11,39 @@ export default function AnalyzePage() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const navigate = useNavigate();
+
+  // Listen for Tauri native file drop events (provides full paths)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (event.payload.type === "enter" || event.payload.type === "over") {
+          setDragOver(true);
+        } else if (event.payload.type === "leave") {
+          setDragOver(false);
+        } else if (event.payload.type === "drop") {
+          setDragOver(false);
+          const paths = event.payload.paths;
+          if (paths.length > 0) {
+            const droppedPath = paths[0];
+            if (droppedPath.endsWith(".apk")) {
+              setApkPath(droppedPath);
+              setError(null);
+            } else {
+              setError("Please drop an APK file (.apk)");
+            }
+          }
+        }
+      })
+      .then((fn) => {
+        unlisten = fn;
+      });
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   const selectFile = useCallback(async () => {
     try {
@@ -40,23 +74,6 @@ export default function AnalyzePage() {
     }
   }, [apkPath, navigate]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (file.name.endsWith(".apk")) {
-        // In Tauri, we need the full path which we can get from the File object
-        // For drag and drop in Tauri v2, we use the path property
-        setApkPath(file.name);
-        setError("Drag and drop may not provide full file path. Please use the file picker instead.");
-      } else {
-        setError("Please select an APK file (.apk)");
-      }
-    }
-  }, []);
-
   return (
     <div className="page analyze-page">
       <h1>Analyze APK</h1>
@@ -67,9 +84,6 @@ export default function AnalyzePage() {
       <div
         className={`drop-zone ${dragOver ? "drag-over" : ""} ${apkPath ? "has-file" : ""}`}
         onClick={selectFile}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
       >
         {apkPath ? (
           <>

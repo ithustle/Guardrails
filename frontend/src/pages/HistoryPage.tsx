@@ -8,6 +8,7 @@ import VerdictBadge from "../components/VerdictBadge";
 export default function HistoryPage() {
   const [analyses, setAnalyses] = useState<AnalysisSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [verdictFilter, setVerdictFilter] = useState<string>("all");
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function HistoryPage() {
     setLoading(true);
     getAnalysisHistory()
       .then(setAnalyses)
-      .catch(console.error)
+      .catch((e) => setError(`Failed to load history: ${e}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -35,6 +36,14 @@ export default function HistoryPage() {
       <div className="page loading-page">
         <Loader2 size={32} className="spinner" />
         <p>Loading history...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page">
+        <div className="error-message">{error}</div>
       </div>
     );
   }
