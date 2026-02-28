@@ -1,0 +1,37 @@
+{
+  "productName": "Guardrails",
+  "version": "1.0.0",
+  "identifier": "com.guardrails.apk-analyzer",
+  "build": {
+    "frontendDist": "../frontend/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "cd ../frontend && npm run dev",
+    "beforeBuildCommand": "cd ../frontend && npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Guardrails — APK Policy Analyzer",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "dialog": {},
+    "fs": {
+      "scope": {
+        "allow": ["**"]
+      }
+    },
+    "shell": {
+      "open": true
+    }
+  }
+}

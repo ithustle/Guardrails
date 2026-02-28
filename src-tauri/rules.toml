@@ -1,0 +1,135 @@
+[meta]
+google_min_target_sdk = 34
+last_updated = "2026-02-28"
+
+[[permissions.critical]]
+name = "android.permission.READ_SMS"
+reason = "Restricted permission. Requires Play Console declaration form and core functionality justification."
+
+[[permissions.critical]]
+name = "android.permission.READ_CALL_LOG"
+reason = "Restricted permission. Only approved default dialer/assistant apps may use this."
+
+[[permissions.critical]]
+name = "android.permission.BIND_ACCESSIBILITY_SERVICE"
+reason = "Top cause of account suspension. Requires accessibility-specific review."
+
+[[permissions.critical]]
+name = "android.permission.REQUEST_INSTALL_PACKAGES"
+reason = "Sideloading capability. Not permitted unless core app store functionality."
+
+[[permissions.critical]]
+name = "android.permission.BIND_DEVICE_ADMIN"
+reason = "Device admin capability. Restricted to EMM/MDM apps only."
+
+[[permissions.critical]]
+name = "android.permission.SYSTEM_ALERT_WINDOW"
+reason = "Overlay permission. Heavily scrutinized for clickjacking."
+
+[[permissions.critical]]
+name = "android.permission.SEND_SMS"
+reason = "SMS sending capability. Restricted to default SMS handler apps only."
+
+[[permissions.critical]]
+name = "android.permission.RECEIVE_SMS"
+reason = "SMS receiving capability. Restricted to default SMS handler apps only."
+
+[[permissions.critical]]
+name = "android.permission.PROCESS_OUTGOING_CALLS"
+reason = "Call interception capability. Restricted to default dialer apps only."
+
+[[permissions.warning]]
+name = "android.permission.ACCESS_BACKGROUND_LOCATION"
+reason = "Background location requires justification and Play Console declaration."
+
+[[permissions.warning]]
+name = "android.permission.QUERY_ALL_PACKAGES"
+reason = "Package visibility. Requires declaration form since 2022."
+
+[[permissions.warning]]
+name = "android.permission.READ_EXTERNAL_STORAGE"
+reason = "Broad storage access. Prefer scoped storage APIs."
+
+[[permissions.warning]]
+name = "android.permission.CAMERA"
+reason = "Verify camera is core functionality. Declare in Play Console."
+
+[[permissions.warning]]
+name = "android.permission.RECORD_AUDIO"
+reason = "Verify audio recording is core functionality."
+
+[[permissions.warning]]
+name = "android.permission.ACCESS_FINE_LOCATION"
+reason = "Precise location access. Verify this is core functionality."
+
+[[permissions.warning]]
+name = "android.permission.READ_CONTACTS"
+reason = "Contact access. Verify this is core functionality and declared properly."
+
+[[permissions.warning]]
+name = "android.permission.WRITE_EXTERNAL_STORAGE"
+reason = "Storage write access. Prefer scoped storage APIs on newer SDKs."
+
+[[sdks.blocked]]
+package_prefix = "com.applovin"
+reason = "Known for aggressive data collection policy violations."
+
+[[sdks.blocked]]
+package_prefix = "cn.jpush"
+reason = "Push SDK flagged for data exfiltration."
+
+[[sdks.blocked]]
+package_prefix = "com.igexin"
+reason = "Push SDK flagged for data collection violations."
+
+[[sdks.warning]]
+package_prefix = "com.facebook.ads"
+reason = "Verify compliance with Meta data practices declaration."
+
+[[sdks.warning]]
+package_prefix = "com.google.android.gms.ads"
+reason = "Verify AdMob policy compliance and consent implementation."
+
+[[sdks.warning]]
+package_prefix = "com.unity3d.ads"
+reason = "Verify Unity Ads compliance and consent implementation."
+
+[[sdks.warning]]
+package_prefix = "com.bytedance"
+reason = "Verify compliance with data handling requirements."
+
+[[patterns.critical]]
+signature = "dalvik.system.DexClassLoader"
+reason = "Dynamic code loading. Violates Play Protect policies."
+
+[[patterns.critical]]
+signature = "dalvik.system.PathClassLoader"
+reason = "Dynamic class loading from external source."
+
+[[patterns.critical]]
+signature = "Runtime.exec"
+reason = "Shell command execution. High risk for malicious behavior."
+
+[[patterns.critical]]
+signature = "Runtime.getRuntime"
+reason = "Runtime access for command execution. High risk for malicious behavior."
+
+[[patterns.warning]]
+signature = "android.webkit.WebView.addJavascriptInterface"
+reason = "JavaScript bridge. Verify no sensitive API exposure."
+
+[[patterns.warning]]
+signature = "java.lang.reflect.Method.invoke"
+reason = "Heavy reflection usage. Verify legitimate use case."
+
+[[patterns.warning]]
+signature = "android.app.admin.DevicePolicyManager"
+reason = "Device admin API usage. Verify legitimate use case."
+
+[[patterns.info]]
+signature = "javax.crypto"
+reason = "Cryptographic operations detected. Verify export compliance."
+
+[[patterns.info]]
+signature = "java.net.URL"
+reason = "Network URL operations detected. Verify all connections use HTTPS."
