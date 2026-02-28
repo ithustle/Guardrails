@@ -27,9 +27,21 @@ async fn analyze_apk(
     state: tauri::State<'_, AppState>,
 ) -> Result<AnalysisReport, String> {
     let apk_path = PathBuf::from(&path);
+
+    // Validate the path: must exist, be a file, and have .apk extension
     if !apk_path.exists() {
         return Err("APK file not found".to_string());
     }
+    let canonical = apk_path
+        .canonicalize()
+        .map_err(|e| format!("Invalid APK path: {}", e))?;
+    if !canonical.is_file() {
+        return Err("Path does not point to a file".to_string());
+    }
+    if canonical.extension().and_then(|e| e.to_str()) != Some("apk") {
+        return Err("File does not have .apk extension".to_string());
+    }
+    let apk_path = canonical;
 
     let apk_filename = apk_path
         .file_name()
@@ -78,22 +90,47 @@ async fn analyze_apk(
     let asset_findings =
         analyzers::resources::analyze_resources(&unpacked.asset_files, &unpacked.resource_files);
 
-    // Step 7: Determine verdict
-    let has_critical = permission_findings
+    // Step 7: VirusTotal check (if API key configured)
+    let vt_api_key = {
+        let settings = state
+            .settings
+            .lock()
+            .map_err(|e| format!("Lock error: {}", e))?;
+        settings
+            .virustotal_api_key
+            .clone()
+            .filter(|k| !k.trim().is_empty())
+    };
+    let vt_result = match vt_api_key {
+        Some(key) => {
+            match virustotal::check_virustotal(&apk_path, &key).await {
+                Ok(result) => Some(result),
+                Err(e) => {
+                    eprintln!("VirusTotal check failed: {}", e);
+                    None
+                }
+            }
+        }
+        None => None,
+    };
+
+    // Step 8: Determine verdict (including VT results)
+    let all_findings: Vec<&Finding> = permission_findings
         .iter()
         .chain(sdk_findings.iter())
         .chain(pattern_findings.iter())
         .chain(asset_findings.iter())
-        .any(|f| f.severity == Severity::Critical);
+        .collect();
 
-    let has_warning = permission_findings
-        .iter()
-        .chain(sdk_findings.iter())
-        .chain(pattern_findings.iter())
-        .chain(asset_findings.iter())
-        .any(|f| f.severity == Severity::Warning);
+    let has_critical = all_findings.iter().any(|f| f.severity == Severity::Critical);
+    let has_warning = all_findings.iter().any(|f| f.severity == Severity::Warning);
 
-    let verdict = if has_critical {
+    let vt_is_malicious = vt_result
+        .as_ref()
+        .map(|vt| vt.status == "MALICIOUS")
+        .unwrap_or(false);
+
+    let verdict = if has_critical || vt_is_malicious {
         Verdict::Fail
     } else if has_warning {
         Verdict::Review
@@ -101,7 +138,7 @@ async fn analyze_apk(
         Verdict::Pass
     };
 
-    // Step 8: Generate summary
+    // Step 9: Generate summary
     let summary = generate_summary(
         &verdict,
         &permission_findings,
@@ -127,7 +164,7 @@ async fn analyze_apk(
         sdks: sdk_findings,
         patterns: pattern_findings,
         assets: asset_findings,
-        virustotal: None,
+        virustotal: vt_result,
         created_at: now,
         pdf_path: None,
     };
@@ -136,7 +173,9 @@ async fn analyze_apk(
     state.db.save_analysis(&report)?;
 
     // Clean up work directory
-    std::fs::remove_dir_all(&work_dir).ok();
+    if let Err(e) = std::fs::remove_dir_all(&work_dir) {
+        eprintln!("Warning: Failed to clean up work directory {:?}: {}", work_dir, e);
+    }
 
     Ok(report)
 }
@@ -229,6 +268,9 @@ async fn check_virustotal_cmd(
     };
 
     let path = Path::new(&apk_path);
+    if !path.exists() || !path.is_file() {
+        return Err("APK file not found for VirusTotal scan".to_string());
+    }
     let result = virustotal::check_virustotal(path, &api_key).await?;
 
     state

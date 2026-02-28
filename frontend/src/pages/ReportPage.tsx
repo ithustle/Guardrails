@@ -12,6 +12,7 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [pdfMessage, setPdfMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -25,9 +26,11 @@ export default function ReportPage() {
   const handleExportPdf = useCallback(async () => {
     if (!id) return;
     setExporting(true);
+    setPdfMessage(null);
     try {
       const pdfPath = await exportPdf(id);
-      alert(`PDF exported to: ${pdfPath}`);
+      setPdfMessage(`PDF exported to: ${pdfPath}`);
+      setTimeout(() => setPdfMessage(null), 8000);
     } catch (e) {
       setError(`PDF export failed: ${e}`);
     } finally {
@@ -75,6 +78,10 @@ export default function ReportPage() {
           </button>
         </div>
       </div>
+
+      {pdfMessage && (
+        <div className="success-message">{pdfMessage}</div>
+      )}
 
       <div className="report-summary">
         <p>{report.summary}</p>

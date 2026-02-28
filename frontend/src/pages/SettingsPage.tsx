@@ -9,6 +9,7 @@ export default function SettingsPage() {
     rules_path: null,
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -16,7 +17,7 @@ export default function SettingsPage() {
     setLoading(true);
     getSettings()
       .then(setSettings)
-      .catch(console.error)
+      .catch((e) => setLoadError(`Failed to load settings: ${e}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     try {
       await saveSettings(settings);
       setMessage("Settings saved successfully.");
+      setTimeout(() => setMessage(null), 5000);
     } catch (e) {
       setMessage(`Failed to save settings: ${e}`);
     } finally {
@@ -38,6 +40,14 @@ export default function SettingsPage() {
       <div className="page loading-page">
         <Loader2 size={32} className="spinner" />
         <p>Loading settings...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="page">
+        <div className="error-message">{loadError}</div>
       </div>
     );
   }

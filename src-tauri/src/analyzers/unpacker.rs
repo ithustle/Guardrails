@@ -8,6 +8,7 @@ pub struct UnpackedApk {
     pub dex_files: Vec<PathBuf>,
     pub asset_files: Vec<PathBuf>,
     pub resource_files: Vec<PathBuf>,
+    pub warnings: Vec<String>,
 }
 
 pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, String> {
@@ -24,6 +25,7 @@ pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, Strin
     let mut dex_files: Vec<PathBuf> = Vec::new();
     let mut asset_files: Vec<PathBuf> = Vec::new();
     let mut resource_files: Vec<PathBuf> = Vec::new();
+    let mut warnings: Vec<String> = Vec::new();
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i)
@@ -31,7 +33,10 @@ pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, Strin
 
         let entry_name = match entry.enclosed_name() {
             Some(name) => name.to_path_buf(),
-            None => continue,
+            None => {
+                warnings.push(format!("Skipped ZIP entry with unsafe path at index {}", i));
+                continue;
+            }
         };
 
         let entry_name_str = entry_name.to_string_lossy().to_string();
@@ -58,8 +63,14 @@ pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, Strin
                 fs::create_dir_all(parent).ok();
             }
             let mut buf = Vec::new();
-            entry.read_to_end(&mut buf).ok();
-            fs::write(&out_path, &buf).ok();
+            if let Err(e) = entry.read_to_end(&mut buf) {
+                warnings.push(format!("Failed to read asset {}: {}", entry_name_str, e));
+                continue;
+            }
+            if let Err(e) = fs::write(&out_path, &buf) {
+                warnings.push(format!("Failed to write asset {}: {}", entry_name_str, e));
+                continue;
+            }
             asset_files.push(out_path);
         } else if entry_name_str.starts_with("res/") {
             let out_path = extract_dir.join(&entry_name);
@@ -67,8 +78,14 @@ pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, Strin
                 fs::create_dir_all(parent).ok();
             }
             let mut buf = Vec::new();
-            entry.read_to_end(&mut buf).ok();
-            fs::write(&out_path, &buf).ok();
+            if let Err(e) = entry.read_to_end(&mut buf) {
+                warnings.push(format!("Failed to read resource {}: {}", entry_name_str, e));
+                continue;
+            }
+            if let Err(e) = fs::write(&out_path, &buf) {
+                warnings.push(format!("Failed to write resource {}: {}", entry_name_str, e));
+                continue;
+            }
             resource_files.push(out_path);
         }
     }
@@ -79,5 +96,6 @@ pub fn unpack_apk(apk_path: &Path, work_dir: &Path) -> Result<UnpackedApk, Strin
         dex_files,
         asset_files,
         resource_files,
+        warnings,
     })
 }
